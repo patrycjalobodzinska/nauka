@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Session-history scratch dir, not app code.
+    ".remember/**",
   ]),
 ]);
 

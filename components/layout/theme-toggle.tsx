@@ -1,0 +1,38 @@
+"use client";
+
+import { Moon, Sun, Monitor } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+export function ThemeToggle() {
+  const { setTheme } = useTheme();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        {/* size-9+ = comfortable touch target */}
+        <Button variant="ghost" size="icon" className="size-9" aria-label="Zmień motyw">
+          <Sun className="size-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+          <Moon className="absolute size-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => setTheme("light")}>
+          <Sun /> Jasny
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setTheme("dark")}>
+          <Moon /> Ciemny
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setTheme("system")}>
+          <Monitor /> Systemowy
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
