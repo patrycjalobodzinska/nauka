@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
@@ -19,7 +20,27 @@ async function loadQuestions(extras: { questions?: string; dataDir?: string }): 
   }
 }
 
-export default async function QuestionsPage({
+export default function QuestionsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ topicSlug: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <p className="mx-auto w-full max-w-3xl text-sm text-muted-foreground">
+          Ładowanie pytań…
+        </p>
+      }
+    >
+      <QuestionsBody params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function QuestionsBody({
   params,
   searchParams,
 }: {

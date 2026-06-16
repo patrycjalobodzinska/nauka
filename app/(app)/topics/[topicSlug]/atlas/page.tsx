@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
@@ -20,7 +21,28 @@ async function loadAtlas(extras: { atlas?: string; dataDir?: string }): Promise<
   }
 }
 
-export default async function AtlasPage({
+export default function AtlasPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ topicSlug: string }>;
+  searchParams: Promise<{ cat?: string }>;
+}) {
+  // Dane dynamiczne (params/searchParams) czytane wewnątrz Suspense — powłoka trasy.
+  return (
+    <Suspense
+      fallback={
+        <p className="mx-auto w-full max-w-5xl text-sm text-muted-foreground">
+          Ładowanie atlasu…
+        </p>
+      }
+    >
+      <AtlasBody params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function AtlasBody({
   params,
   searchParams,
 }: {

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Minimize2 } from "lucide-react";
@@ -9,11 +10,25 @@ import { SECTIONS } from "@/lib/constants";
 
 export const metadata = { title: "Tryb skupienia" };
 
-export default async function FocusPage({
+export default function FocusPage({
   params,
 }: {
   params: Promise<{ noteId: string }>;
 }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="grid h-full place-items-center text-sm text-muted-foreground">
+          Ładowanie…
+        </div>
+      }
+    >
+      <FocusBody params={params} />
+    </Suspense>
+  );
+}
+
+async function FocusBody({ params }: { params: Promise<{ noteId: string }> }) {
   const { noteId } = await params;
   const note = await getNoteById(noteId);
   if (!note) notFound();

@@ -9,23 +9,23 @@ import { FlashcardStudy } from "@/components/wnl/flashcard-study";
 
 export const metadata: Metadata = { title: "Fiszki WNL" };
 
-export default async function FlashcardsPage({ params }: { params: Promise<{ setId: string }> }) {
-  const { setId } = await params;
-  if (!/^\d+$/.test(setId)) notFound();
-
+export default function FlashcardsPage({ params }: { params: Promise<{ setId: string }> }) {
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8">
       <Link href="/test/flashcards" className="mb-4 inline-block text-sm text-muted-foreground hover:text-foreground">
         ← Wszystkie talie
       </Link>
       <Suspense fallback={<p className="text-muted-foreground">Ładowanie…</p>}>
-        <Deck setId={Number(setId)} />
+        <Deck params={params} />
       </Suspense>
     </main>
   );
 }
 
-async function Deck({ setId }: { setId: number }) {
+async function Deck({ params }: { params: Promise<{ setId: string }> }) {
+  const { setId: rawSetId } = await params;
+  if (!/^\d+$/.test(rawSetId)) notFound();
+  const setId = Number(rawSetId);
   const file = path.join(process.cwd(), "scripts/scrape/_data", `flashcards-${setId}.json`);
   let raw: string;
   try {

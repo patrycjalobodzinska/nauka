@@ -30,7 +30,15 @@ let OUT = path.join("scripts", "scrape", "_pdf"); // może zostać podmienione p
 let EN_APPENDIX = false; // --en-appendix → aneks z rycinami EN na końcu
 const MANIFEST = path.join(DATA, "_manifest.json");
 
-type Manifest = { lessons: { id: number; name: string; slideshowIds: number[] }[] };
+type Manifest = {
+  lessons: {
+    id: number;
+    name: string;
+    slideshowIds: number[];
+    course?: string;
+    region?: string;
+  }[];
+};
 type Group = { name: string; file: string; slideshowIds: number[] };
 
 function slug(s: string): string {

@@ -46,7 +46,23 @@ function ArticleLeaf({ node }: { node: ContentNode }) {
   );
 }
 
-export default async function TopicPage({
+export default function TopicPage({
+  params,
+}: {
+  params: Promise<{ topicSlug: string }>;
+}) {
+  // params (dane dynamiczne) czytane WEWNĄTRZ Suspense — pozwala wyrenderować
+  // statyczną powłokę trasy (wymóg cacheComponents).
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <Suspense fallback={<ExtrasFallback />}>
+        <TopicBody params={params} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function TopicBody({
   params,
 }: {
   params: Promise<{ topicSlug: string }>;
@@ -54,15 +70,9 @@ export default async function TopicPage({
   const { topicSlug } = await params;
   const scraped = getContentNode(topicSlug);
 
-  // Węzeł utworzony przez użytkownika (wymaga DB) — całość w Suspense.
+  // Węzeł utworzony przez użytkownika (wymaga DB).
   if (!scraped) {
-    return (
-      <div className="mx-auto w-full max-w-3xl">
-        <Suspense fallback={<ExtrasFallback />}>
-          <UserTopicView slug={topicSlug} />
-        </Suspense>
-      </div>
-    );
+    return <UserTopicView slug={topicSlug} />;
   }
 
   const wnl = {
@@ -73,7 +83,7 @@ export default async function TopicPage({
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <>
       {scraped.slideshowId != null ? (
         // Liść (lekcja) → artykuł WNL z nawigacją (powrót + poprzedni/następny).
         <ArticleLeaf node={scraped} />
@@ -103,6 +113,6 @@ export default async function TopicPage({
       <Suspense fallback={<ExtrasFallback />}>
         <TopicExtras wnl={wnl} />
       </Suspense>
-    </div>
+    </>
   );
 }
