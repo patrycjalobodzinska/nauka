@@ -1,26 +1,31 @@
 import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { buildArticle, type ArticleNode } from "@/lib/wnl/build-article";
 import { resolveSlideshowFile } from "@/lib/wnl/slideshow-path";
+import { readContentText } from "@/lib/wnl/content-store";
 import { localizeSlides } from "@/lib/wnl/media-map";
 import { htmlOverride } from "@/lib/wnl/html-overrides";
 import { MediaSlider } from "@/components/wnl/media-slider";
 
 /**
  * Server component: renderuje artykuł ze slideshow-<id>.json. id slideshowów KOLIDUJĄ
- * między kursami, więc czytamy z konkretnego katalogu kursu (dataDir); fallback = szukanie globalne.
+ * między kursami, więc czytamy z konkretnego katalogu kursu (dataDir) — lokalnie
+ * z dysku, na prod z Vercel Blob. Bez dataDir (np. /test) fallback = szukanie lokalne.
  */
 export async function ArticleView({ id, dataDir }: { id: number; dataDir?: string }) {
-  const file = dataDir
-    ? path.join(process.cwd(), "scripts/scrape", dataDir, `slideshow-${id}.json`)
-    : resolveSlideshowFile(id);
-  if (!file) return <NotDownloaded id={id} />;
-  let raw: string;
-  try {
-    raw = await readFile(file, "utf8");
-  } catch {
-    return <NotDownloaded id={id} />;
+  let raw: string | null = null;
+  if (dataDir) {
+    raw = await readContentText(`${dataDir}/slideshow-${id}.json`);
+  } else {
+    const file = resolveSlideshowFile(id);
+    if (file) {
+      try {
+        raw = await readFile(file, "utf8");
+      } catch {
+        raw = null;
+      }
+    }
   }
+  if (raw == null) return <NotDownloaded id={id} />;
   const { title, nodes } = buildArticle(JSON.parse(raw));
   return (
     <>

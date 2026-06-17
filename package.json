@@ -22,7 +22,8 @@
     "scrape:course": "tsx scripts/scrape/course.ts",
     "scrape:questions-pdf": "tsx scripts/scrape/export-questions-pdf.ts",
     "scrape:atlas-pdf": "tsx scripts/scrape/export-atlas-pdf.ts",
-    "scrape:media": "tsx scripts/scrape/download-media.ts"
+    "scrape:media": "tsx scripts/scrape/download-media.ts",
+    "scrape:blob": "node --env-file=.env.local scripts/scrape/upload-blob.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

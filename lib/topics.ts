@@ -119,7 +119,7 @@ export function mergeTrees(scraped: ContentNode[], flat: Topic[]): MergedNode[] 
  * po kursach nadal działa.
  */
 export async function getMergedTreeSafe(): Promise<MergedNode[]> {
-  const scraped = getContentTree();
+  const scraped = await getContentTree();
   try {
     const user = await getCurrentUser();
     const flat = await getUserTopicsFlat(user.id);

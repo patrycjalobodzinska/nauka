@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+import { readContentText } from "@/lib/wnl/content-store";
 import { buildDeck } from "@/lib/wnl/build-flashcards";
 import { FlashcardStudy } from "@/components/wnl/flashcard-study";
 
@@ -26,11 +25,8 @@ async function Deck({ params }: { params: Promise<{ setId: string }> }) {
   const { setId: rawSetId } = await params;
   if (!/^\d+$/.test(rawSetId)) notFound();
   const setId = Number(rawSetId);
-  const file = path.join(process.cwd(), "scripts/scrape/_data", `flashcards-${setId}.json`);
-  let raw: string;
-  try {
-    raw = await readFile(file, "utf8");
-  } catch {
+  const raw = await readContentText(`_data/flashcards-${setId}.json`);
+  if (raw == null) {
     return (
       <div className="article-prose">
         <h1>Talia {setId} nie jest pobrana</h1>

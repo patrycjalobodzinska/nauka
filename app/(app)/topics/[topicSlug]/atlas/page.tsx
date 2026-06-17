@@ -1,11 +1,10 @@
 import { Suspense } from "react";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { courseExtras } from "@/lib/wnl/course-extras";
 import { localImage } from "@/lib/wnl/media-map";
+import { readContentJson } from "@/lib/wnl/content-store";
 import { AtlasGallery } from "@/components/wnl/atlas-gallery";
 
 type AtlasItem = { id: string; name: string; image: string; images?: string[]; category: string };
@@ -13,12 +12,7 @@ type Atlas = { total: number; categories: string[]; items: AtlasItem[] };
 
 async function loadAtlas(extras: { atlas?: string; dataDir?: string }): Promise<Atlas | null> {
   if (!extras.atlas) return null;
-  try {
-    const file = path.join(process.cwd(), "scripts/scrape", extras.dataDir ?? "_data", extras.atlas);
-    return JSON.parse(await readFile(file, "utf8"));
-  } catch {
-    return null;
-  }
+  return readContentJson<Atlas>(`${extras.dataDir ?? "_data"}/${extras.atlas}`);
 }
 
 export default function AtlasPage({

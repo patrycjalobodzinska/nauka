@@ -70,7 +70,7 @@ export async function createTopic(input: {
       where: and(eq(topics.userId, user.id), eq(topics.slug, slug)),
       columns: { id: true },
     });
-    if (!clash && !isContentSlug(slug)) break;
+    if (!clash && !(await isContentSlug(slug))) break;
     slug = `${base}-${i}`;
   }
 

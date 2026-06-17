@@ -1,6 +1,5 @@
 import "server-only";
-import { readFileSync, existsSync } from "node:fs";
-import path from "node:path";
+import { readContentJson } from "@/lib/wnl/content-store";
 
 /**
  * Drzewo nawigacji budowane LOKALNIE z manifestów (scripts/scrape/<dataDir>/_manifest.json),
@@ -44,26 +43,31 @@ function slugify(input: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function loadLessons(cfg: CourseCfg): ManifestLesson[] {
-  const file = path.join(process.cwd(), "scripts", "scrape", cfg.dataDir, "_manifest.json");
-  if (!existsSync(file)) return [];
-  try {
-    const all: ManifestLesson[] = JSON.parse(readFileSync(file, "utf8")).lessons ?? [];
-    const ours = cfg.match ? all.filter((l) => cfg.match!.test(l.course ?? "")) : all;
-    return ours.filter((l) => l.slideshowIds?.length);
-  } catch {
-    return [];
-  }
+async function loadLessons(cfg: CourseCfg): Promise<ManifestLesson[]> {
+  const json = await readContentJson<{ lessons?: ManifestLesson[] }>(
+    `${cfg.dataDir}/_manifest.json`
+  );
+  const all = json?.lessons ?? [];
+  const ours = cfg.match ? all.filter((l) => cfg.match!.test(l.course ?? "")) : all;
+  return ours.filter((l) => l.slideshowIds?.length);
 }
 
-let cache: {
+type Built = {
   tree: ContentNode[];
   bySlug: Map<string, ContentNode>;
   parentBySlug: Map<string, ContentNode>;
-} | null = null;
+};
 
-function build() {
+let cache: Promise<Built> | null = null;
+
+function build(): Promise<Built> {
   if (cache) return cache;
+  cache = buildOnce();
+  return cache;
+}
+
+async function buildOnce(): Promise<Built> {
+  const lessonsByCourse = await Promise.all(COURSES.map((cfg) => loadLessons(cfg)));
   const used = new Set<string>();
   const uniq = (base: string) => {
     const s = slugify(base) || "temat";
@@ -76,8 +80,9 @@ function build() {
   const reg = (n: ContentNode) => (bySlug.set(n.slug, n), n);
 
   const tree: ContentNode[] = [];
-  for (const cfg of COURSES) {
-    const lessons = loadLessons(cfg);
+  for (let ci = 0; ci < COURSES.length; ci++) {
+    const cfg = COURSES[ci];
+    const lessons = lessonsByCourse[ci];
     if (!lessons.length) continue;
 
     const regions: string[] = [];
@@ -118,22 +123,21 @@ function build() {
   };
   walk(tree, null);
 
-  cache = { tree, bySlug, parentBySlug };
-  return cache;
+  return { tree, bySlug, parentBySlug };
 }
 
-export function getContentTree(): ContentNode[] {
-  return build().tree;
+export async function getContentTree(): Promise<ContentNode[]> {
+  return (await build()).tree;
 }
 
-export function getContentNode(slug: string): ContentNode | undefined {
-  return build().bySlug.get(slug);
+export async function getContentNode(slug: string): Promise<ContentNode | undefined> {
+  return (await build()).bySlug.get(slug);
 }
 
 /** Czy slug należy do treści scrapowanej? Używane przy nadawaniu slugów węzłom
  *  użytkownika, by nie kolidowały z istniejącymi URL-ami tematów WNL. */
-export function isContentSlug(slug: string): boolean {
-  return build().bySlug.has(slug);
+export async function isContentSlug(slug: string): Promise<boolean> {
+  return (await build()).bySlug.has(slug);
 }
 
 export type NavRef = { slug: string; title: string };
@@ -142,12 +146,12 @@ export type NavRef = { slug: string; title: string };
  * Nawigacja artykułu: rodzic (nadrzędna kategoria) oraz poprzedni/następny
  * artykuł wśród rodzeństwa-liści tego samego rodzica.
  */
-export function getContentNav(slug: string): {
+export async function getContentNav(slug: string): Promise<{
   parent: { slug: string; title: string; emoji: string | null } | null;
   prev: NavRef | null;
   next: NavRef | null;
-} | null {
-  const b = build();
+} | null> {
+  const b = await build();
   const node = b.bySlug.get(slug);
   if (!node) return null;
 

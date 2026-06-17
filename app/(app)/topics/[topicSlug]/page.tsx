@@ -18,8 +18,9 @@ function ExtrasFallback() {
   );
 }
 
-function ArticleLeaf({ node }: { node: ContentNode }) {
-  const nav = getContentNav(node.slug);
+type Nav = Awaited<ReturnType<typeof getContentNav>>;
+
+function ArticleLeaf({ node, nav }: { node: ContentNode; nav: Nav }) {
   const hasNav = nav && (nav.parent || nav.prev || nav.next);
   return (
     <>
@@ -68,7 +69,7 @@ async function TopicBody({
   params: Promise<{ topicSlug: string }>;
 }) {
   const { topicSlug } = await params;
-  const scraped = getContentNode(topicSlug);
+  const scraped = await getContentNode(topicSlug);
 
   // Węzeł utworzony przez użytkownika (wymaga DB).
   if (!scraped) {
@@ -82,11 +83,13 @@ async function TopicBody({
     slideshowId: scraped.slideshowId,
   };
 
+  const nav = scraped.slideshowId != null ? await getContentNav(scraped.slug) : null;
+
   return (
     <>
       {scraped.slideshowId != null ? (
         // Liść (lekcja) → artykuł WNL z nawigacją (powrót + poprzedni/następny).
-        <ArticleLeaf node={scraped} />
+        <ArticleLeaf node={scraped} nav={nav} />
       ) : (
         // Folder (kurs/region) → lista podtematów.
         <>

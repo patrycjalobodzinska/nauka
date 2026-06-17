@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { BookOpen, FileText } from "lucide-react";
 import {
@@ -7,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getContentTree, type ContentNode } from "@/lib/wnl/content-tree";
 
 export const metadata = { title: "Pulpit" };
@@ -18,17 +20,26 @@ function countLessons(nodes: ContentNode[]): number {
   );
 }
 
-export default async function DashboardPage() {
-  const tree = getContentTree();
-  const lessons = countLessons(tree);
-
+export default function DashboardPage() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 space-y-8 p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dzień dobry 👋</h1>
         <p className="text-muted-foreground">Wiedza podstawowa — wybierz dziedzinę i ucz się.</p>
       </div>
+      <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}>
+        <DashboardContent />
+      </Suspense>
+    </main>
+  );
+}
 
+async function DashboardContent() {
+  const tree = await getContentTree();
+  const lessons = countLessons(tree);
+
+  return (
+    <>
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
@@ -68,6 +79,6 @@ export default async function DashboardPage() {
           ))}
         </div>
       </section>
-    </main>
+    </>
   );
 }

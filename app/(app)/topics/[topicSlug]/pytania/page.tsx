@@ -1,23 +1,20 @@
 import { Suspense } from "react";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { QuestionCard, type Question } from "@/components/wnl/question-card";
 import { courseExtras } from "@/lib/wnl/course-extras";
+import { readContentJson } from "@/lib/wnl/content-store";
 
 const PER_PAGE = 15;
 
 async function loadQuestions(extras: { questions?: string; dataDir?: string }): Promise<Question[]> {
   if (!extras.questions) return [];
-  try {
-    const file = path.join(process.cwd(), "scripts/scrape", extras.dataDir ?? "_data", extras.questions);
-    const json = JSON.parse(await readFile(file, "utf8"));
-    return Array.isArray(json) ? json : (json.questions ?? []);
-  } catch {
-    return [];
-  }
+  const json = await readContentJson<Question[] | { questions?: Question[] }>(
+    `${extras.dataDir ?? "_data"}/${extras.questions}`
+  );
+  if (!json) return [];
+  return Array.isArray(json) ? json : (json.questions ?? []);
 }
 
 export default function QuestionsPage({
