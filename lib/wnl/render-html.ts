@@ -43,6 +43,8 @@ figure figcaption{margin-top:.35em;font-size:.85em;color:#555;font-style:italic;
 .figrow{display:flex;flex-wrap:wrap;gap:.6em;justify-content:center;align-items:flex-start}
 .figrow .slide{flex:1 1 30%;min-width:0}
 .figrow .slide img{max-height:150mm}
+.embed-link{margin:.9em 0;padding:.55em .8em;border:1px solid #cdd6e0;border-radius:6px;background:#f5f8fb;font-family:system-ui,-apple-system,sans-serif;font-size:.95em;break-inside:avoid}
+.embed-link a{color:#0b6bcb;text-decoration:underline;word-break:break-all}
 .lead{color:#666;font-size:.9rem;margin:0 0 1.4em;font-family:system-ui,sans-serif}
 .article{break-before:page}
 .article:first-of-type{break-before:auto}
@@ -59,6 +61,29 @@ function esc(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/**
+ * Iframe (podcast/wideo) nie działa w PDF — zamieniamy go na klikalny link.
+ * Etykieta z atrybutu title="…"; typ rozpoznajemy po hoście (Podbean → „Podkast",
+ * YouTube/Vimeo → „Wideo"). W PDF link jest klikalny (Chromium zapisuje adnotację).
+ */
+function embedsToLinks(html: string): string {
+  return html.replace(
+    /<iframe\b([^>]*?)\s*(?:\/>|>(?:[\s\S]*?<\/iframe>)?)/gi,
+    (_full, attrs: string) => {
+      const src = attrs.match(/\bsrc="([^"]+)"/i)?.[1];
+      if (!src) return "";
+      const title = attrs.match(/\btitle="([^"]*)"/i)?.[1]?.trim();
+      const isPodcast = /podbean|podcast|soundcloud|spotify|anchor\.fm|buzzsprout/i.test(src);
+      const isVideo = /youtube|youtu\.be|vimeo/i.test(src);
+      const kind = isPodcast ? "Podkast" : isVideo ? "Wideo" : "Materiał";
+      const icon = isPodcast ? "🎧" : isVideo ? "🎬" : "🔗";
+      const href = esc(src.replace(/&amp;/g, "&"));
+      const label = esc(title || kind);
+      return `<p class="embed-link">${icon} ${kind}: <a href="${href}">${label}</a></p>`;
+    }
+  );
 }
 
 /** storage.googleapis.com / gumlet → gumlet z limitem szerokości (mniejszy PDF). */
@@ -106,7 +131,7 @@ function renderNode(node: ArticleNode, width: number): string {
     case "heading":
       return `<h${node.level}>${esc(node.text)}</h${node.level}>`;
     case "html":
-      return node.html; // już zsanityzowane w build-article.ts
+      return embedsToLinks(node.html); // iframe (podcast/wideo) → klikalny link
     case "media":
       return renderMedia(node, width);
   }
