@@ -19,8 +19,9 @@ export type ContentNode = {
 
 type CourseCfg = { slug: string; title: string; emoji: string; dataDir: string; match?: RegExp };
 
-/** Wiedza podstawowa (przedkliniczna). match = filtr po nazwie kursu, gdy dataDir wspólny. */
+/** match = filtr po nazwie kursu, gdy dataDir wspólny (_data: anatomia + histologia). */
 export const COURSES: CourseCfg[] = [
+  // Wiedza podstawowa (przedkliniczna)
   { slug: "anatomia", title: "Anatomia", emoji: "🦴", dataDir: "_data", match: /Anatomii/i },
   { slug: "histologia", title: "Histologia", emoji: "🔬", dataDir: "_data", match: /Histologii/i },
   { slug: "fizjologia", title: "Fizjologia", emoji: "🫁", dataDir: "_data-fizjologia" },
@@ -29,6 +30,15 @@ export const COURSES: CourseCfg[] = [
   { slug: "mikrobiologia", title: "Mikrobiologia", emoji: "🦠", dataDir: "_data-mikrobiologia" },
   { slug: "farmakologia", title: "Farmakologia", emoji: "💊", dataDir: "_data-farmakologia" },
   { slug: "genetyka", title: "Genetyka", emoji: "🧬", dataDir: "_data-genetyka" },
+  // Wiedza kliniczna (bez stomatologii)
+  { slug: "chirurgia", title: "Chirurgia", emoji: "🔪", dataDir: "_data-chirurgia" },
+  { slug: "interna", title: "Interna", emoji: "🩺", dataDir: "_data-interna" },
+  { slug: "pediatria", title: "Pediatria", emoji: "👶", dataDir: "_data-pediatria" },
+  { slug: "ginekologia", title: "Ginekologia i położnictwo", emoji: "🤰", dataDir: "_data-ginekologia" },
+  { slug: "psychiatria", title: "Psychiatria", emoji: "🧠", dataDir: "_data-psychiatria" },
+  { slug: "onkologia", title: "Onkologia", emoji: "🎗️", dataDir: "_data-onkologia" },
+  { slug: "medycyna-ratunkowa", title: "Medycyna ratunkowa", emoji: "🚑", dataDir: "_data-ratunkowa" },
+  { slug: "snk", title: "SNK", emoji: "🏥", dataDir: "_data-snk" },
 ];
 
 type ManifestLesson = { id: number; name: string; slideshowIds: number[]; course?: string; region?: string };
