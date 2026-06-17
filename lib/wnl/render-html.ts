@@ -62,7 +62,7 @@ function esc(s: string): string {
 }
 
 /** storage.googleapis.com / gumlet → gumlet z limitem szerokości (mniejszy PDF). */
-export function toGumlet(url: string, width = 1400): string {
+export function toGumlet(url: string, width = 1000): string {
   if (!url) return url;
   const gci = url.match(/storage\.googleapis\.com\/media-manager\/(.+)$/i);
   const path = gci ? gci[1] : url.match(/gumlet\.io\/(.+)$/i)?.[1];
@@ -134,7 +134,7 @@ export type RenderOptions = {
   title?: string;
   /** Podtytuł pod H1 (np. „Chirurgia stomatologiczna • Lekcja 12"). */
   subtitle?: string;
-  /** Maks. szerokość obrazków w px (gumlet ?w=). Domyślnie 1400. */
+  /** Maks. szerokość obrazków w px (gumlet ?w=). Domyślnie 1000. */
   imgWidth?: number;
   /** Dołącz na końcu aneks z rycinami EN (jeśli istnieją). */
   enAppendix?: boolean;
@@ -144,7 +144,7 @@ export type RenderOptions = {
 
 /** Jeden lub więcej artykułów (np. wszystkie slideshowy lekcji) → jeden dokument HTML. */
 export function articleToHtml(articles: Article[], opts: RenderOptions = {}): string {
-  const width = opts.imgWidth ?? 1400;
+  const width = opts.imgWidth ?? 1000;
   const isMulti = articles.length > 1;
   const docTitle = opts.title ?? articles[0]?.title ?? "Artykuł";
   const sub = opts.subtitle ? `<p class="lead">${esc(opts.subtitle)}</p>` : "";

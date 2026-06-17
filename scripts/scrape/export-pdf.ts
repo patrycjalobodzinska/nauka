@@ -28,6 +28,7 @@ import { articleToHtml } from "../../lib/wnl/render-html";
 const DATA = path.join("scripts", "scrape", process.env.SCRAPE_DATA_DIR ?? "_data");
 let OUT = path.join("scripts", "scrape", "_pdf"); // może zostać podmienione przez --out=
 let EN_APPENDIX = false; // --en-appendix → aneks z rycinami EN na końcu
+let IMG_WIDTH: number | undefined; // --img-width=<px> → mniejsze ryciny (domyślnie 1000)
 const MANIFEST = path.join(DATA, "_manifest.json");
 
 type Manifest = {
@@ -117,12 +118,16 @@ const FOOTER = `<div style="width:100%;font-size:8px;color:#999;text-align:cente
   <span class="title"></span> &nbsp;·&nbsp; <span class="pageNumber"></span>/<span class="totalPages"></span>
 </div>`;
 
-/** Pobiera obrazek i zwraca data-URI (z retry — gumlet „na zimno" bywa wolny/zawodny). */
-async function fetchAsDataUri(url: string, tries = 4): Promise<string | null> {
+/** Pobiera obrazek i zwraca data-URI (z retry + timeout — gumlet „na zimno"
+ *  bywa wolny/zawodny; bez timeoutu jedno zawieszone żądanie blokowałoby worker). */
+async function fetchAsDataUri(url: string, tries = 5): Promise<string | null> {
   for (let t = 0; t < tries; t++) {
     try {
       // Accept bez webp/avif → gumlet (format=auto) serwuje JPEG, pewny do osadzenia w PDF.
-      const r = await fetch(url, { headers: { Accept: "image/jpeg,image/png;q=0.9,*/*;q=0.8" } });
+      const r = await fetch(url, {
+        headers: { Accept: "image/jpeg,image/png;q=0.9,*/*;q=0.8" },
+        signal: AbortSignal.timeout(25_000),
+      });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const buf = Buffer.from(await r.arrayBuffer());
       if (!buf.length) throw new Error("pusty");
@@ -174,12 +179,31 @@ async function renderGroup(page: Page, g: Group, force: boolean): Promise<boolea
     return false;
   }
 
-  const html = articleToHtml(articles, { title: g.name, enAppendix: EN_APPENDIX });
+  const html = articleToHtml(articles, {
+    title: g.name,
+    enAppendix: EN_APPENDIX,
+    imgWidth: IMG_WIDTH,
+  });
   // Pewna metoda: pobieramy obrazki w node (z retry) i wbudowujemy jako data-URI.
   // Dzięki temu page.pdf NIE zależy od sieci ani od cold-genu gumleta — zero zgubionych rycin.
   const { html: embedded, total, failed } = await embedImages(html);
   await page.setContent(embedded, { waitUntil: "load", timeout: 60_000 }).catch(() => {});
-  await page.waitForTimeout(150);
+
+  // Poczekaj aż WSZYSTKIE obrazki się załadują i ZDEKODUJĄ — inaczej page.pdf()
+  // łapie je „w połowie" (ucięte/puste). Data-URI nie idą po sieci, więc to szybkie.
+  await page
+    .waitForFunction(() => Array.from(document.images).every((i) => i.complete), {
+      timeout: 30_000,
+    })
+    .catch(() => {});
+  await page
+    .evaluate(() =>
+      Promise.allSettled(
+        Array.from(document.images).map((i) => (i.decode ? i.decode() : Promise.resolve()))
+      ).then(() => undefined)
+    )
+    .catch(() => {});
+  await page.waitForTimeout(250); // bufor na ostateczny layout przed drukiem
 
   const broken = failed;
   await page.pdf({
@@ -201,6 +225,8 @@ async function main() {
   const force = raw.includes("--force");
   const perSlideshow = raw.includes("--per-slideshow");
   EN_APPENDIX = raw.includes("--en-appendix");
+  const widthArg = raw.find((a) => a.startsWith("--img-width="))?.slice("--img-width=".length);
+  if (widthArg && Number.isFinite(Number(widthArg))) IMG_WIDTH = Number(widthArg);
   const idArgs = raw.filter((a) => !a.startsWith("--")).map(Number).filter((n) => Number.isFinite(n));
 
   // --out=<podfolder> → PDF-y do _pdf/<podfolder>/ (oddziela kursy/regiony)
