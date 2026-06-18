@@ -189,32 +189,39 @@ async function renderGroup(page: Page, g: Group, force: boolean): Promise<boolea
   const { html: embedded, total, failed } = await embedImages(html);
   await page.setContent(embedded, { waitUntil: "load", timeout: 60_000 }).catch(() => {});
 
-  // Poczekaj aż WSZYSTKIE obrazki się załadują i ZDEKODUJĄ — inaczej page.pdf()
-  // łapie je „w połowie" (ucięte/puste). Data-URI nie idą po sieci, więc to szybkie.
+  // Poczekaj aż obrazki się załadują i (krótko) zdekodują — inaczej page.pdf()
+  // łapie je „w połowie". KAŻDE oczekiwanie ma twardy limit, by pojedyncza
+  // wadliwa rycina nie zawiesiła całego biegu (zdarzyło się: decode bez limitu).
   await page
     .waitForFunction(() => Array.from(document.images).every((i) => i.complete), {
-      timeout: 30_000,
+      timeout: 20_000,
     })
     .catch(() => {});
   await page
-    .evaluate(() =>
-      Promise.allSettled(
-        Array.from(document.images).map((i) => (i.decode ? i.decode() : Promise.resolve()))
-      ).then(() => undefined)
-    )
+    .evaluate(async () => {
+      const imgs = Array.from(document.images);
+      const decodeAll = Promise.allSettled(
+        imgs.map((i) => (i.decode ? i.decode() : Promise.resolve()))
+      );
+      const cap = new Promise((res) => setTimeout(res, 8000));
+      await Promise.race([decodeAll, cap]); // dekodowanie max 8s
+    })
     .catch(() => {});
-  await page.waitForTimeout(250); // bufor na ostateczny layout przed drukiem
+  await page.waitForTimeout(200); // bufor na ostateczny layout przed drukiem
 
   const broken = failed;
-  await page.pdf({
-    path: outPath,
-    format: "A4",
-    printBackground: true,
-    margin: { top: "16mm", bottom: "16mm", left: "14mm", right: "14mm" },
-    displayHeaderFooter: true,
-    headerTemplate: "<span></span>",
-    footerTemplate: FOOTER,
-  });
+  await Promise.race([
+    page.pdf({
+      path: outPath,
+      format: "A4",
+      printBackground: true,
+      margin: { top: "16mm", bottom: "16mm", left: "14mm", right: "14mm" },
+      displayHeaderFooter: true,
+      headerTemplate: "<span></span>",
+      footerTemplate: FOOTER,
+    }),
+    new Promise((_, rej) => setTimeout(() => rej(new Error("page.pdf przekroczył 90s")), 90_000)),
+  ]);
 
   console.log(`✓ ${g.file}  (${articles.length} art., ${total} rycin${broken ? `, ⚠ ${broken} nie pobrano` : ""})`);
   return true;
